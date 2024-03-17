@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		840AAC2E2BA6CB3F005C00DA /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 840AAC2D2BA6CB3F005C00DA /* main.c */; };
+		84A8659A2BA6E31400638674 /* zuc.c in Sources */ = {isa = PBXBuildFile; fileRef = 84A865992BA6E31400638674 /* zuc.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +26,8 @@
 /* Begin PBXFileReference section */
 		840AAC2A2BA6CB3F005C00DA /* ZUC256 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ZUC256; sourceTree = BUILT_PRODUCTS_DIR; };
 		840AAC2D2BA6CB3F005C00DA /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		84A865982BA6E31400638674 /* zuc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = zuc.h; sourceTree = "<group>"; };
+		84A865992BA6E31400638674 /* zuc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = zuc.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +61,8 @@
 			isa = PBXGroup;
 			children = (
 				840AAC2D2BA6CB3F005C00DA /* main.c */,
+				84A865982BA6E31400638674 /* zuc.h */,
+				84A865992BA6E31400638674 /* zuc.c */,
 			);
 			path = ZUC256;
 			sourceTree = "<group>";
@@ -98,11 +103,12 @@
 			};
 			buildConfigurationList = 840AAC252BA6CB3F005C00DA /* Build configuration list for PBXProject "ZUC256" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 840AAC212BA6CB3F005C00DA;
 			productRefGroup = 840AAC2B2BA6CB3F005C00DA /* Products */;
@@ -119,6 +125,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				84A8659A2BA6E31400638674 /* zuc.c in Sources */,
 				840AAC2E2BA6CB3F005C00DA /* main.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

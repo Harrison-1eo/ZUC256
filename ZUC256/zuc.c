@@ -7,32 +7,54 @@
 
 #include "zuc.h"
 
-uchar d[16] = {
-    0b0100010, 0b0101111, 0b0100100, 0b0101010,
-    0b1101101, 0b1000000, 0b1000000, 0b1000000,
-    0b1000000, 0b1000000, 0b1000000, 0b1000000,
-    0b1000000, 0b1010010, 0b0010000, 0b0110000
-};
+#define left_rotate(x, n) ((x << n) | (x >> (32 - n)))
+#define multi_add_mod(a, b) ((1 << b) * s[a] + v) % (1 << 31 - 1)
 
-uchar key[32];
-uchar iv[32];
+u8 key[32];
+u8 iv[32];
 
-uint s[16] = {0};
-uint x[4] = {0};
-uint r1 = 0;
-uint r2 = 0;
+u32 s[17] = {0};
+u32 x[4] = {0};
+u32 r1 = 0;
+u32 r2 = 0;
 
-// 输入4个uchar，将四个字符的比特连接起来得到一个uint
-uint link_char_to_int(uchar a, uchar b, uchar c, uchar d){
-    uint result = 0;
+void initialization (u8 *k, u8 *iv){
+    for (int i = 0; i < 32; i++){
+        key[i] = k[i];
+        iv[i] = iv[i];
+    }
+    load_LFSR();
+    r1 = r2 = 0;
+
+    u32 w = 0;
+    for (int i = 0; i < 32; i++){
+        bit_reorganization();
+        w = F(x[0], x[1], x[2]);
+        LFSR_with_initialization_mode(w >> 1);
+    }
+    bit_reorganization();
+    w = F(x[0], x[1], x[2]);
+    LFSR_with_work_mode();
+}
+
+u32 key_stream_generator(void){
+    bit_reorganization();
+    u32 w = F(x[0], x[1], x[2]);
+    LFSR_with_work_mode();
+    return w ^ x[3];
+}
+
+// 输入4个u8，将四个字符的比特连接起来得到一个u32
+u32 link_char_to_int(u8 a, u8 b, u8 c, u8 d){
+    u32 result = 0;
     result = (a << 24) | (b << 16) | (c << 8) | d;
     return result;
 }
 
-// 输入两个uint 和两个左右指示符，
-// 将两个uint的高16比特或者低16比特连接起来得到一个uint
-uint link_int_to_int(uint a, char a_pos, uint b, char b_pos){
-    uint result = 0;
+// 输入两个u32 和两个左右指示符，
+// 将两个u32的高16比特或者低16比特连接起来得到一个u32
+u32 link_int_to_int(u32 a, char a_pos, u32 b, char b_pos){
+    u32 result = 0;
     if (a_pos == 'L'){
         result = (a & 0x0000FFFF);
     } else if (a_pos == 'H'){
@@ -73,23 +95,35 @@ void bit_reorganization(void){
     x[3] = link_int_to_int(s[2], 'L', s[0], 'H');
 }
 
-uint S (uint x){
-    // S盒，待补充
-    return 0;
+u32 S (u32 x){
+    u8 bit8[4] = {0};
+    u8 result[4] = {0};
+    bit8[0] = x >> 24;
+    bit8[1] = (x >> 16) & 0xff;
+    bit8[2] = (x >> 8) & 0xff;
+    bit8[3] = x & 0xff;
+    for (int i = 0; i < 4; i++){
+        u8 row = bit8[i] >> 4;
+        u8 nuw = bit8[i] & 0xf;
+        if (i == 0 || i == 2){
+            result[i] = S0[row][nuw];
+        } else {
+            result[i] = S1[row][nuw];
+        }
+    }
+    u32 ans = (result[0] << 24) | (result[1] << 16) | (result[2] << 8) | result[3];
 }
 
-uint L1 (uint x){
-    // L1，待补充
-    return 0;
+u32 L1 (u32 x){
+    return x ^ left_rotate(x, 2) ^ left_rotate(x, 10) ^ left_rotate(x, 18) ^ left_rotate(x, 24);
 }
 
-uint L2 (uint x){
-    // L2，待补充
-    return 0;
+u32 L2 (u32 x){
+    return x ^ left_rotate(x, 8) ^ left_rotate(x, 14) ^ left_rotate(x, 22) ^ left_rotate(x, 30);
 }
 
-uint F (uint x0, uint x1, uint x2){
-    uint w, w1, w2;
+u32 F (u32 x0, u32 x1, u32 x2){
+    u32 w, w1, w2;
     w = (x[0] ^ r1) + r2;
     w1 = r1 + x[1];
     w2 = r2 ^ x[2];
@@ -98,32 +132,45 @@ uint F (uint x0, uint x1, uint x2){
     return w;
 }
 
-void LFSR_with_initialization_mode(uint u){
-    // 待补充
+void LFSR_with_initialization_mode(u32 u){
+    u32 v = s[0];
+    v = multi_add_mod(0, 8);
+    v = multi_add_mod(4, 20);
+    v = multi_add_mod(10, 21);
+    v = multi_add_mod(13, 17);
+    v = multi_add_mod(15, 15);
+    if (v == 0)
+        v = 1 << 31 - 1;
+
+    s[16] = (u + v) % (1 << 31 - 1);
+    if (s[16] == 0)
+        s[16] = 1 << 31 - 1;
+
+    // s16, s15,..., s1 -> s15, s14,..., s0
+    for (int i = 15; i >= 0; i--){
+        s[i] = s[i + 1];
+    }
     return;
 }
 
 void LFSR_with_work_mode(void){
-    // 待补充
+    u32 v = 0;
+    v = multi_add_mod(0, 8);
+    v = multi_add_mod(4, 20);
+    v = multi_add_mod(10, 21);
+    v = multi_add_mod(13, 17);
+    v = multi_add_mod(15, 15);
+
+    s[16] = v;
+    if (s[16] == 0)
+        s[16] = 1 << 31 - 1;
+
+    // s16, s15,..., s1 -> s15, s14,..., s0
+    for (int i = 15; i >= 0; i--){
+        s[i] = s[i + 1];
+    }
     return;
 }
 
-void initialization (uchar *k, uchar *iv){
-    for (int i = 0; i < 32; i++){
-        key[i] = k[i];
-        iv[i] = iv[i];
-    }
-    load_LFSR();
-    r1 = r2 = 0;
 
-    uint w = 0;
-    for (int i = 0; i < 32; i++){
-        bit_reorganization();
-        w = F(x[0], x[1], x[2]);
-        LFSR_with_initialization_mode(w >> 1);
-    }
-    bit_reorganization();
-    w = F(x[0], x[1], x[2]);
-    LFSR_with_work_mode();
-}
 

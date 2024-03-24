@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		840AAC2E2BA6CB3F005C00DA /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 840AAC2D2BA6CB3F005C00DA /* main.c */; };
 		84A8659A2BA6E31400638674 /* zuc.c in Sources */ = {isa = PBXBuildFile; fileRef = 84A865992BA6E31400638674 /* zuc.c */; };
+		84AC9F972BAD7BF700D24EC3 /* ZUC256_AVX512.c in Sources */ = {isa = PBXBuildFile; fileRef = 84AC9F932BAD7BF700D24EC3 /* ZUC256_AVX512.c */; };
+		84AC9F982BAD7BF700D24EC3 /* ZUC256_TEST_AVX512.c in Sources */ = {isa = PBXBuildFile; fileRef = 84AC9F952BAD7BF700D24EC3 /* ZUC256_TEST_AVX512.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +30,10 @@
 		840AAC2D2BA6CB3F005C00DA /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		84A865982BA6E31400638674 /* zuc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = zuc.h; sourceTree = "<group>"; };
 		84A865992BA6E31400638674 /* zuc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = zuc.c; sourceTree = "<group>"; };
+		84AC9F922BAD7BF700D24EC3 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		84AC9F932BAD7BF700D24EC3 /* ZUC256_AVX512.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ZUC256_AVX512.c; sourceTree = "<group>"; };
+		84AC9F942BAD7BF700D24EC3 /* ZUC256_AVX512.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZUC256_AVX512.h; sourceTree = "<group>"; };
+		84AC9F952BAD7BF700D24EC3 /* ZUC256_TEST_AVX512.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ZUC256_TEST_AVX512.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +50,7 @@
 		840AAC212BA6CB3F005C00DA = {
 			isa = PBXGroup;
 			children = (
+				84AC9F962BAD7BF700D24EC3 /* ZUC256_AVX512 */,
 				840AAC2C2BA6CB3F005C00DA /* ZUC256 */,
 				840AAC2B2BA6CB3F005C00DA /* Products */,
 			);
@@ -65,6 +72,17 @@
 				84A865992BA6E31400638674 /* zuc.c */,
 			);
 			path = ZUC256;
+			sourceTree = "<group>";
+		};
+		84AC9F962BAD7BF700D24EC3 /* ZUC256_AVX512 */ = {
+			isa = PBXGroup;
+			children = (
+				84AC9F922BAD7BF700D24EC3 /* README.md */,
+				84AC9F932BAD7BF700D24EC3 /* ZUC256_AVX512.c */,
+				84AC9F942BAD7BF700D24EC3 /* ZUC256_AVX512.h */,
+				84AC9F952BAD7BF700D24EC3 /* ZUC256_TEST_AVX512.c */,
+			);
+			path = ZUC256_AVX512;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -125,6 +143,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				84AC9F972BAD7BF700D24EC3 /* ZUC256_AVX512.c in Sources */,
+				84AC9F982BAD7BF700D24EC3 /* ZUC256_TEST_AVX512.c in Sources */,
 				84A8659A2BA6E31400638674 /* zuc.c in Sources */,
 				840AAC2E2BA6CB3F005C00DA /* main.c in Sources */,
 			);

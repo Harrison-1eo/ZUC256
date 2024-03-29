@@ -71,8 +71,10 @@ __m128i _mm_aesenclast_si128 (__m128i a, __m128i RoundKey)
 这个函数是AES指令集的一部分，用于执行AES加密的最后一轮，但它在支持AES指令集的处理器上工作，针对单个128位的数据块。
 
 */
-#define V1SET1B _mm_set1_epi8
-#define V1AESLAST _mm_aesenclast_si128
+// #define V1SET1B _mm_set1_epi8
+// #define V1AESLAST _mm_aesenclast_si128
+
+#define V4AESLAST _mm512_aesenclast_epi128
 
 #define V4OR  _mm512_or_si512
 #define V4XOR _mm512_xor_si512
@@ -134,8 +136,9 @@ __m512i k_mul_mask2;
 __m512i t_mul_mask1;
 __m512i t_mul_mask2;
 __m512i shuffle_mask;
-__m128i aes_const_key;
 
+// __m128i aes_const_key;
+__m512i aes_const_key;
 
 #define MBP_MASK 0x7FFFFFFF
 __m512i mbp_mask;
@@ -191,7 +194,9 @@ void ZUC256_Setup_AVX512()
 	t_mul_mask1 = V4SETD(T_MUL_MASK1);
 	t_mul_mask2 = V4SETD(T_MUL_MASK2);
 	shuffle_mask = V4SETD(AES_SHUF_MASK);
-	aes_const_key = V1SET1B(AES_CONST_KEY);
+	// aes_const_key = V1SET1B(AES_CONST_KEY);
+
+	aes_const_key = V4SET1B(AES_CONST_KEY);
 
 	mbp_mask = V4SET1D(MBP_MASK);
 }
@@ -225,20 +230,23 @@ __m512i sbox1(const __m512i in)
 	__m512i hi = V4SHUFB(k_mul_mask2, V4AND(V4SRL(in, 4), lower_nibble_mask));		// 高4位
 	__m512i y_inv = V4SHUFB(V4XOR(low, hi), shuffle_mask);			// y_inv = shuffle(low ^ hi)
 	
-	// 执行AES最后一轮AES LAST
-	__m128i tmp[4];
-	tmp[0] = V1AESLAST(_mm512_castsi512_si128(y_inv), aes_const_key);
-	tmp[1] = V1AESLAST(_mm512_extracti32x4_epi32(y_inv, 1), aes_const_key);
-	tmp[2] = V1AESLAST(_mm512_extracti32x4_epi32(y_inv, 2), aes_const_key);
-	tmp[3] = V1AESLAST(_mm512_extracti32x4_epi32(y_inv, 3), aes_const_key);
+	// // 执行AES最后一轮AES LAST
+	// __m128i tmp[4];
+	// tmp[0] = V1AESLAST(_mm512_castsi512_si128(y_inv), aes_const_key);
+	// tmp[1] = V1AESLAST(_mm512_extracti32x4_epi32(y_inv, 1), aes_const_key);
+	// tmp[2] = V1AESLAST(_mm512_extracti32x4_epi32(y_inv, 2), aes_const_key);
+	// tmp[3] = V1AESLAST(_mm512_extracti32x4_epi32(y_inv, 3), aes_const_key);
 
-	// 将4个__m128i合并成一个__m512i
-	y_inv = _mm512_castsi128_si512(tmp[0]);
-	y_inv = _mm512_inserti32x4(y_inv, tmp[1], 1);
-	y_inv = _mm512_inserti32x4(y_inv, tmp[2], 2);
-	y_inv = _mm512_inserti32x4(y_inv, tmp[3], 3);
 
-	// 
+
+	// // 将4个__m128i合并成一个__m512i
+	// y_inv = _mm512_castsi128_si512(tmp[0]);
+	// y_inv = _mm512_inserti32x4(y_inv, tmp[1], 1);
+	// y_inv = _mm512_inserti32x4(y_inv, tmp[2], 2);
+	// y_inv = _mm512_inserti32x4(y_inv, tmp[3], 3);
+
+	y_inv = V4AESLAST(y_inv, aes_const_key);
+	
 	low = V4SHUFB(t_mul_mask1, V4AND(y_inv, lower_nibble_mask));
 	hi = V4SHUFB(t_mul_mask2, V4AND(V4SRL(y_inv, 4), lower_nibble_mask));
 
@@ -511,7 +519,7 @@ __m512i Word_Reverse(__m512i r)
 void ZUC256_MAC_AVX512(u32 *MAC, int MAC_BITLEN, const u8 *IK, const u8 *IV, const u32 *M, const u32 LENGTH)
 {
 	__m512i W, W1, W2, u, v, a, b, f;
-	__m128i s[8], r[8], t;
+	// __m128i s[8], r[8], t;
 	__m256i z[2];
 	__m512i *vecz, t0, t1;
 	__m512i tmp[4], temp[4] = { 0 };
@@ -553,6 +561,14 @@ void ZUC256_MAC_AVX512(u32 *MAC, int MAC_BITLEN, const u8 *IK, const u8 *IV, con
 	// vecz 中存储了16个并行的密钥流
 	// M 中存储了16个并行的消息，每个消息有 LENGTH 个字（一字为32位）
 
+	__m512i s[2], r[2], t, t2;
+	__m512i idx = _mm512_set_epi32(
+    15, 13, 11, 9, 7, 5, 3, 1, 
+    15, 13, 11, 9, 7, 5, 3, 1  // 重复以匹配 __m512i 的大小
+	);
+	__m512i combined, permuted;
+	__m256i result[2];
+
 	for (i = 0; i < LENGTH; i++)
 	{
 		t0 = Word_Reverse(V4LOADU(M + 16 * i));			// 对每一路消息字进行比特翻转
@@ -561,41 +577,93 @@ void ZUC256_MAC_AVX512(u32 *MAC, int MAC_BITLEN, const u8 *IK, const u8 *IV, con
 		z[1] = _mm512_extracti32x8_epi32(t0, 1);		// 从 t0 中提取 256 位，第二个参数为提取的位置，1表示a[511:256]，由8个打包的 32 位整数组成
 		t0 = _mm512_cvtepu32_epi64(z[0]);				// 将打包的无符号 32 位整数扩展到打包的 64 位整数
 		t1 = _mm512_cvtepu32_epi64(z[1]);
-		r[0] = _mm512_castsi512_si128(t0);				// 将 __m512i 类型的向量强制转换为 __m128i 类型，取低128位，即a[127:0]，由4个打包的 32 位整数组成，即低4路消息
-		r[1] = _mm512_extracti32x4_epi32(t0, 1);		// 从 a 中提取 128 位（由 4 个打包的 32 位整数组成）,第二个参数为提取的位置，1表示a[255:128]
-		r[2] = _mm512_extracti32x4_epi32(t0, 2);		// 2表示a[383:256]
-		r[3] = _mm512_extracti32x4_epi32(t0, 3);		// 3表示a[511:384]
-		r[4] = _mm512_castsi512_si128(t1);
-		r[5] = _mm512_extracti32x4_epi32(t1, 1);
-		r[6] = _mm512_extracti32x4_epi32(t1, 2);
-		r[7] = _mm512_extracti32x4_epi32(t1, 3);
+		// r[0] = _mm512_castsi512_si128(t0);				// 将 __m512i 类型的向量强制转换为 __m128i 类型，取低128位，即a[127:0]，由4个打包的 32 位整数组成，即低4路消息
+		// r[1] = _mm512_extracti32x4_epi32(t0, 1);		// 从 a 中提取 128 位（由 4 个打包的 32 位整数组成）,第二个参数为提取的位置，1表示a[255:128]
+		// r[2] = _mm512_extracti32x4_epi32(t0, 2);		// 2表示a[383:256]
+		// r[3] = _mm512_extracti32x4_epi32(t0, 3);		// 3表示a[511:384]
+		// r[4] = _mm512_castsi512_si128(t1);
+		// r[5] = _mm512_extracti32x4_epi32(t1, 1);
+		// r[6] = _mm512_extracti32x4_epi32(t1, 2);
+		// r[7] = _mm512_extracti32x4_epi32(t1, 3);
+
+		// r[0] = 
+		// r[1] = _mm512_extracti32x8_epi32(t0, 1);		// 从 t0 中提取 256 位，第二个参数为提取的位置，1表示a[511:256]，由8个打包的 32 位整数组成
+
+		r[0] = t0;
+		r[1] = t1;
 
 		for (j = 0; j < MAC_WORDLEN; j++)
 		{
 			t0 = _mm512_unpacklo_epi32(vecz[i + j + MAC_WORDLEN + 1], vecz[i + j + MAC_WORDLEN]);
 			t1 = _mm512_unpackhi_epi32(vecz[i + j + MAC_WORDLEN + 1], vecz[i + j + MAC_WORDLEN]);
-			s[0] = _mm512_castsi512_si128(t0);
-			s[1] = _mm512_castsi512_si128(t1);
-			s[2] = _mm512_extracti32x4_epi32(t0, 1);
-			s[3] = _mm512_extracti32x4_epi32(t1, 1);
-			s[4] = _mm512_extracti32x4_epi32(t0, 2);
-			s[5] = _mm512_extracti32x4_epi32(t1, 2);
-			s[6] = _mm512_extracti32x4_epi32(t0, 3);
-			s[7] = _mm512_extracti32x4_epi32(t1, 3);
-			for (k = 0; k < 8; k++)
-			{
-				// _mm_clmulepi64_si128 : 64位乘法，生成128位结果
-				// imm8[0] 决定是使用 a 的低64位 (a[63:0]) 还是高64位 (a[127:64])
-				// imm8[1] 决定是使用 b 的低64位 (b[63:0]) 还是高64位 (b[127:64])
-				// 0x00 表示使用 a 的低64位和 b 的低64位
-				// 0x11 表示使用 a 的高64位和 b 的高64位
+			// s[0] = _mm512_castsi512_si128(t0);
+			// s[1] = _mm512_castsi512_si128(t1);
+			// s[2] = _mm512_extracti32x4_epi32(t0, 1);
+			// s[3] = _mm512_extracti32x4_epi32(t1, 1);
+			// s[4] = _mm512_extracti32x4_epi32(t0, 2);
+			// s[5] = _mm512_extracti32x4_epi32(t1, 2);
+			// s[6] = _mm512_extracti32x4_epi32(t0, 3);
+			// s[7] = _mm512_extracti32x4_epi32(t1, 3);
 
-				t = _mm_clmulepi64_si128(s[k], r[k], 0x00);		
-				// 将结果中的第二个32位整数存储到 tmp[j].m512i_u32[2 * k] 中
-				tmp[j].m512i_u32[2 * k] = t.m128i_u32[1];
-				t = _mm_clmulepi64_si128(s[k], r[k], 0x11);
-				tmp[j].m512i_u32[2 * k + 1] = t.m128i_u32[1];
+			s[0] = t0;
+			s[1] = t1;
+
+			// 源代码
+			// for (k = 0; k < 8; k++)
+			// {
+			// 	// _mm_clmulepi64_si128 : 64位乘法，生成128位结果
+			// 	// imm8[0] 决定是使用 a 的低64位 (a[63:0]) 还是高64位 (a[127:64])
+			// 	// imm8[1] 决定是使用 b 的低64位 (b[63:0]) 还是高64位 (b[127:64])
+			// 	// 0x00 表示使用 a 的低64位和 b 的低64位
+			// 	// 0x11 表示使用 a 的高64位和 b 的高64位
+
+			// 	t = _mm_clmulepi64_si128(s[k], r[k], 0x00);		
+			// 	// 将结果中的第二个32位整数存储到 tmp[j].m512i_u32[2 * k] 中
+			// 	tmp[j].m512i_u32[2 * k] = t.m128i_u32[1];
+			// 	t = _mm_clmulepi64_si128(s[k], r[k], 0x11);
+			// 	tmp[j].m512i_u32[2 * k + 1] = t.m128i_u32[1];
+			// }
+
+			// 修改后的代码
+			for (k = 0; k < 2; k++)
+			{
+				t = _mm512_clmulepi64_epi128(s[k], r[k], 0x00);
+				// 提取每个128位结果的第二个32位整数并存储
+				// tmp[j].m512i_u32[0 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t, 0), 1);
+				// tmp[j].m512i_u32[4 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t, 1), 1);
+				// tmp[j].m512i_u32[8 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t, 2), 1);
+				// tmp[j].m512i_u32[12 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t, 3), 1);
+
+				t2 = _mm512_clmulepi64_epi128(s[k], r[k], 0x11);
+				// 提取每个128位结果的第二个32位整数并存储
+				// tmp[j].m512i_u32[1 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t2, 0), 1);
+				// tmp[j].m512i_u32[5 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t2, 1), 1);
+				// tmp[j].m512i_u32[9 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t2, 2), 1);
+				// tmp[j].m512i_u32[13 + 2*k] = _mm_extract_epi32(_mm512_extracti64x2_epi64(t2, 3), 1);
+
+
+				// 将t和t2的结果组合在一起
+				combined = _mm512_unpacklo_epi64(t, t2);
+				
+				// 使用_mm512_permutexvar_epi32根据idx向量排列combined向量中的32位元素
+				permuted = _mm512_permutexvar_epi32(idx, combined);
+				result[k] = _mm512_extracti32x8_epi32(permuted, 0);
+				
+				// 现在permuted向量包含了排列好的32位元素，可以将它们存储到tmp中
+
+				// 将第一个__m256i变量“提升”为__m512i变量
+				// __m512i result = _mm512_castsi256_si512(a);
+
+				// 将第二个__m256i变量插入到result中，填充高256位
+				// result = _mm512_inserti64x4(result, b, 1);
+
+				// 此时，result变量包含了a和b的数据：a在低256位，b在高256位
+
 			}
+
+			tmp[j] = _mm512_castsi256_si512(result[0]);
+			tmp[j] = _mm512_inserti64x4(tmp[j], result[1], 1);
+
 			tmp[j] = V4XOR(tmp[j], temp[j]);
 			temp[j] = tmp[j];
 		}
